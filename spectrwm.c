@@ -188,6 +188,7 @@ u_int32_t		swm_debug = 0
 #define SWM_FOCUS_DEFAULT	(0)
 #define SWM_FOCUS_SYNERGY	(1)
 #define SWM_FOCUS_FOLLOW	(2)
+#define SWM_FOCUS_DONT_FOLLOW	(3)
 
 #define SWM_CONF_DEFAULT	(0)
 #define SWM_CONF_KEYMAPPING	(1)
@@ -5279,6 +5280,8 @@ setconfvalue(char *selector, char *value, int flags)
 			focus_mode = SWM_FOCUS_FOLLOW;
 		else if (!strcmp(value, "synergy"))
 			focus_mode = SWM_FOCUS_SYNERGY;
+		else if (!strcmp(value, "disabled"))
+			focus_mode = SWM_FOCUS_DONT_FOLLOW;
 		else
 			errx(1, "focus_mode");
 		break;
@@ -6287,7 +6290,8 @@ enternotify(XEvent *e)
 		return;
 	}
 
-	focus_magic(win);
+	if (focus_mode != SWM_FOCUS_DONT_FOLLOW)
+		focus_magic(win);
 }
 
 /* lets us use one switch statement for arbitrary mode/detail combinations */
