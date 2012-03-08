@@ -1,0 +1,17 @@
+This is a simple fork of spectrwm, a minimalistic tiling window manager.
+
+The original code is available here:
+
+https://opensource.conformal.com/wiki/spectrwm
+
+This fork is mainly intended for my personal use, but you're free to check it out and use it
+on your computer.
+
+The original goals for this fork are 2:
+
+- Get rid of the very annoing on mouse over focus mode (I couldn't find a way to get
+  rid of this behaviour without modifying the code)
+
+- Start playing with Git and GitHUB, since I'm a long time SVN user and I need a real project
+  to get into a new SCM
+
