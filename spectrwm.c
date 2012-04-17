@@ -447,7 +447,9 @@ enum	{ SWM_S_COLOR_BAR, SWM_S_COLOR_BAR_BORDER, SWM_S_COLOR_BAR_FONT,
 	  SWM_S_COLOR_FOCUS, SWM_S_COLOR_UNFOCUS, SWM_S_COLOR_MAX };
 
 /* physical screen mapping */
-#define SWM_WS_MAX		(10)
+#define SWM_WS_MAX		(22)	/* hard limit */
+int		workspace_limit = 10;	/* soft limit */
+
 struct swm_screen {
 	int			idx;	/* screen index */
 	struct swm_region_list	rl;	/* list of regions on this screen */
@@ -1403,11 +1405,11 @@ bar_urgent(char *s, ssize_t sz)
 	if (urgent_enabled == 0)
 		return;
 
-	for (i = 0; i < SWM_WS_MAX; i++)
+	for (i = 0; i < workspace_limit; i++)
 		urgent[i] = 0;
 
 	for (i = 0; i < ScreenCount(display); i++)
-		for (j = 0; j < SWM_WS_MAX; j++)
+		for (j = 0; j < workspace_limit; j++)
 			TAILQ_FOREACH(win, &screens[i].ws[j].winlist, entry) {
 				wmh = XGetWMHints(display, win->id);
 				if (wmh == NULL)
@@ -1419,7 +1421,7 @@ bar_urgent(char *s, ssize_t sz)
 			}
 
 	strlcat(s, "* ", sz);
-	for (i = 0; i < SWM_WS_MAX; i++) {
+	for (i = 0; i < workspace_limit; i++) {
 		if (urgent[i])
 			snprintf(b, sizeof b, "%d ", i + 1);
 		else
@@ -1848,7 +1850,7 @@ unmap_all(void)
 	int			i, j;
 
 	for (i = 0; i < ScreenCount(display); i++)
-		for (j = 0; j < SWM_WS_MAX; j++)
+		for (j = 0; j < workspace_limit; j++)
 			TAILQ_FOREACH(win, &screens[i].ws[j].winlist, entry)
 				unmap_window(win);
 }
@@ -1937,7 +1939,7 @@ find_unmanaged_window(Window id)
 	int			i, j;
 
 	for (i = 0; i < ScreenCount(display); i++)
-		for (j = 0; j < SWM_WS_MAX; j++)
+		for (j = 0; j < workspace_limit; j++)
 			TAILQ_FOREACH(win, &screens[i].ws[j].unmanagedlist,
 			    entry)
 				if (id == win->id)
@@ -1954,7 +1956,7 @@ find_window(Window id)
 	unsigned int		nc;
 
 	for (i = 0; i < ScreenCount(display); i++)
-		for (j = 0; j < SWM_WS_MAX; j++)
+		for (j = 0; j < workspace_limit; j++)
 			TAILQ_FOREACH(win, &screens[i].ws[j].winlist, entry)
 				if (id == win->id)
 					return (win);
@@ -1971,7 +1973,7 @@ find_window(Window id)
 
 	/* look for parent */
 	for (i = 0; i < ScreenCount(display); i++)
-		for (j = 0; j < SWM_WS_MAX; j++)
+		for (j = 0; j < workspace_limit; j++)
 			TAILQ_FOREACH(win, &screens[i].ws[j].winlist, entry)
 				if (wpr == win->id)
 					return (win);
@@ -2059,7 +2061,7 @@ kill_refs(struct ws_win *win)
 
 	for (i = 0; i < ScreenCount(display); i++)
 		TAILQ_FOREACH(r, &screens[i].rl, entry)
-			for (x = 0; x < SWM_WS_MAX; x++) {
+			for (x = 0; x < workspace_limit; x++) {
 				ws = &r->s->ws[x];
 				if (win == ws->focus)
 					ws->focus = NULL;
@@ -2081,7 +2083,7 @@ validate_win(struct ws_win *testwin)
 
 	for (i = 0; i < ScreenCount(display); i++)
 		TAILQ_FOREACH(r, &screens[i].rl, entry)
-			for (x = 0; x < SWM_WS_MAX; x++) {
+			for (x = 0; x < workspace_limit; x++) {
 				ws = &r->s->ws[x];
 				TAILQ_FOREACH(win, &ws->winlist, entry)
 					if (win == testwin)
@@ -2100,7 +2102,7 @@ validate_ws(struct workspace *testws)
 	/* validate all ws */
 	for (i = 0; i < ScreenCount(display); i++)
 		TAILQ_FOREACH(r, &screens[i].rl, entry)
-			for (x = 0; x < SWM_WS_MAX; x++) {
+			for (x = 0; x < workspace_limit; x++) {
 				ws = &r->s->ws[x];
 				if (ws == testws)
 					return (0);
@@ -2168,7 +2170,7 @@ unfocus_all(void)
 	DNPRINTF(SWM_D_FOCUS, "unfocus_all\n");
 
 	for (i = 0; i < ScreenCount(display); i++)
-		for (j = 0; j < SWM_WS_MAX; j++)
+		for (j = 0; j < workspace_limit; j++)
 			TAILQ_FOREACH(win, &screens[i].ws[j].winlist, entry)
 				unfocus_win(win);
 }
@@ -2250,6 +2252,9 @@ switchws(struct swm_region *r, union arg *args)
 	if (!(r && r->s))
 		return;
 
+	if (wsid >= workspace_limit)
+		return;
+
 	this_r = r;
 	old_ws = this_r->ws;
 	new_ws = &this_r->s->ws[wsid];
@@ -2312,7 +2317,7 @@ cyclews(struct swm_region *r, union arg *args)
 			cycle_all = 1;
 			/* FALLTHROUGH */
 		case SWM_ARG_ID_CYCLEWS_UP:
-			if (a.id < SWM_WS_MAX - 1)
+			if (a.id < workspace_limit - 1)
 				a.id++;
 			else
 				a.id = 0;
@@ -2324,7 +2329,7 @@ cyclews(struct swm_region *r, union arg *args)
 			if (a.id > 0)
 				a.id--;
 			else
-				a.id = SWM_WS_MAX - 1;
+				a.id = workspace_limit - 1;
 			break;
 		default:
 			return;
@@ -3240,6 +3245,9 @@ send_to_ws(struct swm_region *r, union arg *args)
 	unsigned char		ws_idx_str[SWM_PROPLEN];
 	union arg		a;
 
+	if (wsid >= workspace_limit)
+		return;
+
 	if (r && r->ws && r->ws->focus)
 		win = r->ws->focus;
 	else
@@ -3438,7 +3446,7 @@ search_workspace(struct swm_region *r, union arg *args)
 	if ((lfile = fdopen(select_list_pipe[1], "w")) == NULL)
 		return;
 
-	for (i = 0; i < SWM_WS_MAX; i++) {
+	for (i = 0; i < workspace_limit; i++) {
 		ws = &r->s->ws[i];
 		if (ws == NULL)
 			continue;
@@ -3606,7 +3614,7 @@ search_resp_search_workspace(char *resp, unsigned long len)
 	p = strchr(q, ':');
 	if (p != NULL)
 		*p = '\0';
-	ws_idx = strtonum(q, 1, SWM_WS_MAX, &errstr);
+	ws_idx = strtonum(q, 1, workspace_limit, &errstr);
 	if (errstr) {
 		DNPRINTF(SWM_D_MISC, "workspace idx is %s: %s",
 		    errstr, q);
@@ -4185,6 +4193,18 @@ enum keyfuncid {
 	kf_ws_8,
 	kf_ws_9,
 	kf_ws_10,
+	kf_ws_11,
+	kf_ws_12,
+	kf_ws_13,
+	kf_ws_14,
+	kf_ws_15,
+	kf_ws_16,
+	kf_ws_17,
+	kf_ws_18,
+	kf_ws_19,
+	kf_ws_20,
+	kf_ws_21,
+	kf_ws_22,
 	kf_ws_next,
 	kf_ws_prev,
 	kf_ws_next_all,
@@ -4202,6 +4222,18 @@ enum keyfuncid {
 	kf_mvws_8,
 	kf_mvws_9,
 	kf_mvws_10,
+	kf_mvws_11,
+	kf_mvws_12,
+	kf_mvws_13,
+	kf_mvws_14,
+	kf_mvws_15,
+	kf_mvws_16,
+	kf_mvws_17,
+	kf_mvws_18,
+	kf_mvws_19,
+	kf_mvws_20,
+	kf_mvws_21,
+	kf_mvws_22,
 	kf_bar_toggle,
 	kf_wind_kill,
 	kf_wind_del,
@@ -4277,6 +4309,18 @@ struct keyfunc {
 	{ "ws_8",		switchws,	{.id = 7} },
 	{ "ws_9",		switchws,	{.id = 8} },
 	{ "ws_10",		switchws,	{.id = 9} },
+	{ "ws_11",		switchws,	{.id = 10} },
+	{ "ws_12",		switchws,	{.id = 11} },
+	{ "ws_13",		switchws,	{.id = 12} },
+	{ "ws_14",		switchws,	{.id = 13} },
+	{ "ws_15",		switchws,	{.id = 14} },
+	{ "ws_16",		switchws,	{.id = 15} },
+	{ "ws_17",		switchws,	{.id = 16} },
+	{ "ws_18",		switchws,	{.id = 17} },
+	{ "ws_19",		switchws,	{.id = 18} },
+	{ "ws_20",		switchws,	{.id = 19} },
+	{ "ws_21",		switchws,	{.id = 20} },
+	{ "ws_22",		switchws,	{.id = 21} },
 	{ "ws_next",		cyclews,	{.id = SWM_ARG_ID_CYCLEWS_UP} },
 	{ "ws_prev",		cyclews,	{.id = SWM_ARG_ID_CYCLEWS_DOWN} },
 	{ "ws_next_all",	cyclews,	{.id = SWM_ARG_ID_CYCLEWS_UP_ALL} },
@@ -4294,6 +4338,18 @@ struct keyfunc {
 	{ "mvws_8",		send_to_ws,	{.id = 7} },
 	{ "mvws_9",		send_to_ws,	{.id = 8} },
 	{ "mvws_10",		send_to_ws,	{.id = 9} },
+	{ "mvws_11",		send_to_ws,	{.id = 10} },
+	{ "mvws_12",		send_to_ws,	{.id = 11} },
+	{ "mvws_13",		send_to_ws,	{.id = 12} },
+	{ "mvws_14",		send_to_ws,	{.id = 13} },
+	{ "mvws_15",		send_to_ws,	{.id = 14} },
+	{ "mvws_16",		send_to_ws,	{.id = 15} },
+	{ "mvws_17",		send_to_ws,	{.id = 16} },
+	{ "mvws_18",		send_to_ws,	{.id = 17} },
+	{ "mvws_19",		send_to_ws,	{.id = 18} },
+	{ "mvws_20",		send_to_ws,	{.id = 19} },
+	{ "mvws_21",		send_to_ws,	{.id = 20} },
+	{ "mvws_22",		send_to_ws,	{.id = 21} },
 	{ "bar_toggle",		bar_toggle,	{0} },
 	{ "wind_kill",		wkill,		{.id = SWM_ARG_ID_KILLWINDOW} },
 	{ "wind_del",		wkill,		{.id = SWM_ARG_ID_DELETEWINDOW} },
@@ -4887,6 +4943,18 @@ setup_keys(void)
 	setkeybinding(MODKEY,		XK_8,		kf_ws_8,	NULL);
 	setkeybinding(MODKEY,		XK_9,		kf_ws_9,	NULL);
 	setkeybinding(MODKEY,		XK_0,		kf_ws_10,	NULL);
+	setkeybinding(MODKEY,		XK_F1,		kf_ws_11,	NULL);
+	setkeybinding(MODKEY,		XK_F2,		kf_ws_12,	NULL);
+	setkeybinding(MODKEY,		XK_F3,		kf_ws_13,	NULL);
+	setkeybinding(MODKEY,		XK_F4,		kf_ws_14,	NULL);
+	setkeybinding(MODKEY,		XK_F5,		kf_ws_15,	NULL);
+	setkeybinding(MODKEY,		XK_F6,		kf_ws_16,	NULL);
+	setkeybinding(MODKEY,		XK_F7,		kf_ws_17,	NULL);
+	setkeybinding(MODKEY,		XK_F8,		kf_ws_18,	NULL);
+	setkeybinding(MODKEY,		XK_F9,		kf_ws_19,	NULL);
+	setkeybinding(MODKEY,		XK_F10,		kf_ws_20,	NULL);
+	setkeybinding(MODKEY,		XK_F11,		kf_ws_21,	NULL);
+	setkeybinding(MODKEY,		XK_F12,		kf_ws_22,	NULL);
 	setkeybinding(MODKEY,		XK_Right,	kf_ws_next,	NULL);
 	setkeybinding(MODKEY,		XK_Left,	kf_ws_prev,	NULL);
 	setkeybinding(MODKEY,		XK_Up,		kf_ws_next_all,	NULL);
@@ -4904,6 +4972,18 @@ setup_keys(void)
 	setkeybinding(MODKEY|ShiftMask,	XK_8,		kf_mvws_8,	NULL);
 	setkeybinding(MODKEY|ShiftMask,	XK_9,		kf_mvws_9,	NULL);
 	setkeybinding(MODKEY|ShiftMask,	XK_0,		kf_mvws_10,	NULL);
+	setkeybinding(MODKEY|ShiftMask,	XK_F1,		kf_mvws_11,	NULL);
+	setkeybinding(MODKEY|ShiftMask,	XK_F2,		kf_mvws_12,	NULL);
+	setkeybinding(MODKEY|ShiftMask,	XK_F3,		kf_mvws_13,	NULL);
+	setkeybinding(MODKEY|ShiftMask,	XK_F4,		kf_mvws_14,	NULL);
+	setkeybinding(MODKEY|ShiftMask,	XK_F5,		kf_mvws_15,	NULL);
+	setkeybinding(MODKEY|ShiftMask,	XK_F6,		kf_mvws_16,	NULL);
+	setkeybinding(MODKEY|ShiftMask,	XK_F7,		kf_mvws_17,	NULL);
+	setkeybinding(MODKEY|ShiftMask,	XK_F8,		kf_mvws_18,	NULL);
+	setkeybinding(MODKEY|ShiftMask,	XK_F9,		kf_mvws_19,	NULL);
+	setkeybinding(MODKEY|ShiftMask,	XK_F10,		kf_mvws_20,	NULL);
+	setkeybinding(MODKEY|ShiftMask,	XK_F11,		kf_mvws_21,	NULL);
+	setkeybinding(MODKEY|ShiftMask,	XK_F12,		kf_mvws_22,	NULL);
 	setkeybinding(MODKEY,		XK_b,		kf_bar_toggle,	NULL);
 	setkeybinding(MODKEY,		XK_Tab,		kf_focus_next,	NULL);
 	setkeybinding(MODKEY|ShiftMask,	XK_Tab,		kf_focus_prev,	NULL);
@@ -5198,8 +5278,8 @@ setup_quirks(void)
 
 enum	{ SWM_S_BAR_DELAY, SWM_S_BAR_ENABLED, SWM_S_BAR_BORDER_WIDTH,
 	  SWM_S_STACK_ENABLED, SWM_S_CLOCK_ENABLED, SWM_S_CLOCK_FORMAT,
-	  SWM_S_CYCLE_EMPTY, SWM_S_CYCLE_VISIBLE, SWM_S_SS_ENABLED,
-	  SWM_S_TERM_WIDTH, SWM_S_TITLE_CLASS_ENABLED,
+	  SWM_S_CYCLE_EMPTY, SWM_S_CYCLE_VISIBLE, SWM_S_WORKSPACE_LIMIT,
+	  SWM_S_SS_ENABLED, SWM_S_TERM_WIDTH, SWM_S_TITLE_CLASS_ENABLED,
 	  SWM_S_TITLE_NAME_ENABLED, SWM_S_WINDOW_NAME_ENABLED, SWM_S_URGENT_ENABLED,
 	  SWM_S_FOCUS_MODE, SWM_S_DISABLE_BORDER, SWM_S_BORDER_WIDTH,
 	  SWM_S_BAR_FONT, SWM_S_BAR_ACTION, SWM_S_SPAWN_TERM,
@@ -5254,6 +5334,13 @@ setconfvalue(char *selector, char *value, int flags)
 		break;
 	case SWM_S_CYCLE_VISIBLE:
 		cycle_visible = atoi(value);
+		break;
+	case SWM_S_WORKSPACE_LIMIT:
+		workspace_limit = atoi(value);
+		if (workspace_limit > SWM_WS_MAX)
+			workspace_limit = SWM_WS_MAX;
+		else if (workspace_limit < 1)
+			workspace_limit = 1;
 		break;
 	case SWM_S_SS_ENABLED:
 		ss_enabled = atoi(value);
@@ -5379,7 +5466,7 @@ setautorun(char *selector, char *value, int flags)
 	if (sscanf(value, "ws[%d]:%1023c", &ws_id, s) != 2)
 		errx(1, "invalid autorun entry, should be 'ws[<idx>]:command'");
 	ws_id--;
-	if (ws_id < 0 || ws_id >= SWM_WS_MAX)
+	if (ws_id < 0 || ws_id >= workspace_limit)
 		errx(1, "autorun: invalid workspace %d", ws_id + 1);
 
 	/*
@@ -5444,7 +5531,7 @@ setlayout(char *selector, char *value, int flags)
 		    "<master_grow>:<master_add>:<stack_inc>:<always_raise>:"
 		    "<type>'");
 	ws_id--;
-	if (ws_id < 0 || ws_id >= SWM_WS_MAX)
+	if (ws_id < 0 || ws_id >= workspace_limit)
 		errx(1, "layout: invalid workspace %d", ws_id + 1);
 
 	if (!strcasecmp(s, "vertical"))
@@ -5518,6 +5605,7 @@ struct config_option configopt[] = {
 	{ "color_unfocus",		setconfcolor,	SWM_S_COLOR_UNFOCUS },
 	{ "cycle_empty",		setconfvalue,	SWM_S_CYCLE_EMPTY },
 	{ "cycle_visible",		setconfvalue,	SWM_S_CYCLE_VISIBLE },
+	{ "workspace_limit",		setconfvalue,	SWM_S_WORKSPACE_LIMIT },
 	{ "dialog_ratio",		setconfvalue,	SWM_S_DIALOG_RATIO },
 	{ "verbose_layout",		setconfvalue,	SWM_S_VERBOSE_LAYOUT },
 	{ "modkey",			setconfmodkey,	0 },
@@ -5835,7 +5923,8 @@ manage_window(Window id)
 		p = NULL;
 	} else if (prop && win->transient == 0) {
 		DNPRINTF(SWM_D_PROP, "manage_window: get _SWM_WS: %s\n", prop);
-		ws_idx = strtonum((const char *)prop, 0, 9, &errstr);
+		ws_idx = strtonum((const char *)prop, 0, workspace_limit - 1,
+		    &errstr);
 		if (errstr) {
 			DNPRINTF(SWM_D_EVENT, "manage_window: window: #%s: %s",
 			    errstr, prop);
@@ -6638,7 +6727,7 @@ new_region(struct swm_screen *s, int x, int y, int w, int h)
 
 	/* if we don't have a workspace already, find one */
 	if (ws == NULL) {
-		for (i = 0; i < SWM_WS_MAX; i++)
+		for (i = 0; i < workspace_limit; i++)
 			if (s->ws[i].r == NULL) {
 				ws = &s->ws[i];
 				break;
@@ -6842,7 +6931,7 @@ setup_screens(void)
 
 		/* init all workspaces */
 		/* XXX these should be dynamically allocated too */
-		for (j = 0; j < SWM_WS_MAX; j++) {
+		for (j = 0; j < workspace_limit; j++) {
 			ws = &screens[i].ws[j];
 			ws->idx = j;
 			ws->name = NULL;
